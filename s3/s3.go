@@ -172,8 +172,8 @@ func (b *Bucket) DelBucket() (err error) {
 // Get retrieves an object from an S3 bucket.
 //
 // See http://goo.gl/isCO7 for details.
-func (b *Bucket) Get(path string) (data []byte, err error) {
-	body, err := b.GetReader(path)
+func (b *Bucket) Get(path string, headers http.Header) (data []byte, err error) {
+	body, err := b.GetReader(path, headers)
 	if err != nil {
 		return nil, err
 	}
@@ -185,8 +185,8 @@ func (b *Bucket) Get(path string) (data []byte, err error) {
 // GetReader retrieves an object from an S3 bucket.
 // It is the caller's responsibility to call Close on rc when
 // finished reading.
-func (b *Bucket) GetReader(path string) (rc io.ReadCloser, err error) {
-	resp, err := b.GetResponse(path)
+func (b *Bucket) GetReader(path string, headers http.Header) (rc io.ReadCloser, err error) {
+	resp, err := b.GetResponse(path, headers)
 	if resp != nil {
 		return resp.Body, err
 	}
@@ -196,14 +196,14 @@ func (b *Bucket) GetReader(path string) (rc io.ReadCloser, err error) {
 // GetResponse retrieves an object from an S3 bucket returning the http response
 // It is the caller's responsibility to call Close on rc when
 // finished reading.
-func (b *Bucket) GetResponse(path string) (*http.Response, error) {
-	return b.getResponseParams(path, nil)
+func (b *Bucket) GetResponse(path string, headers http.Header) (*http.Response, error) {
+	return b.getResponseParams(path, nil, headers)
 }
 
 // GetTorrent retrieves an Torrent object from an S3 bucket an io.ReadCloser.
 // It is the caller's responsibility to call Close on rc when finished reading.
 func (b *Bucket) GetTorrentReader(path string) (io.ReadCloser, error) {
-	resp, err := b.getResponseParams(path, url.Values{"torrent": {""}})
+	resp, err := b.getResponseParams(path, url.Values{"torrent": {""}}, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -222,10 +222,11 @@ func (b *Bucket) GetTorrent(path string) ([]byte, error) {
 	return ioutil.ReadAll(body)
 }
 
-func (b *Bucket) getResponseParams(path string, params url.Values) (*http.Response, error) {
+func (b *Bucket) getResponseParams(path string, params url.Values, headers http.Header) (*http.Response, error) {
 	req := &request{
 		bucket: b.Name,
 		path:   path,
+		headers: headers,
 		params: params,
 	}
 	err := b.S3.prepare(req)
